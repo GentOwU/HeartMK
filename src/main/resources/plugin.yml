@@ -1,0 +1,34 @@
+name: HeartMK
+version: '0.1-SNAPSHOT'
+main: org.gentuwu.heartMK.HeartMK
+api-version: '1.21'
+prefix: 'HeartMK'
+authors: [ GentUwU ]
+description: Plugin for improvments on MK server
+website: https://github.com/mxTeamCEO/HeartMK
+commands:
+  ayugram:
+    description: "ayugram anonimen"
+    usage: "/ayugram <autgram>"
+    aliases: [ayugram, ayu]
+    permission: heartmk.command.ayugram
+    permission-message: "ayugram ne anonimen"
+  ren:
+    description: "Rename the item in your hand"
+    usage: "/ren <new name>"
+    aliases: [ren, rename]
+    permission: heartmk.command.ren
+    permission-message: "REPORT TO ADMINS TO CHECK PERMISSIONS"
+  head:
+    description: "Put the item in your hand on your head"
+    usage: "/head"
+    aliases: [head]
+    permission: heartmk.command.head
+    permission-message: "REPORT TO ADMINS TO CHECK PERMISSIONS"
+permissions :
+  heartmk.command.ayugram:
+    default: true
+  heartmk.command.ren:
+    default: true
+  heartmk.command.head:
+    default: true

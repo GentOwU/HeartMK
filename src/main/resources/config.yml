@@ -1,0 +1,10 @@
+# config.yml
+
+# Metadata key for bees
+beeMetadataKey: "AlexeyZavr"
+
+# Custom name for the cherry sapling
+cherrySaplingName: "Cherrygram"
+
+# Explosion power for bee explosion
+explosionPower: 100.0
