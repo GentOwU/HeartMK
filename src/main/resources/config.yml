@@ -1,20 +1,31 @@
 # Configuration for HeartMK Plugin
 
 # Version of the configuration
-version: "0.2.0-SNAPSHOT"
+version: "0.3.0-SNAPSHOT"  # Update this with every change to the config
 
 # Metadata key for bees
-# This is a unique identifier for managing bee entities in the plugin.
-beeMetadataKey: "AlexeyZavr"
+beeMetadataKey: "AlexeyZavr"  # Used to identify specific bees
 
 # Custom name for the cherry sapling
-# This name will be displayed when a cherry sapling is obtained.
-cherrySaplingName: "Cherrygram"
+cherrySaplingName: "Cherrygram"  # Display name for the sapling item
 
 # Explosion power for bee explosion
-# This value controls the power of explosions caused by bees (0.0 to 40.0).
-explosionPower: 1.0
+explosionPower: 1.0  # Determines the strength of the explosion when a bee is triggered
 
 # Time (in seconds) between renames for a player
-# This sets a cooldown period for renaming to prevent spamming.
-renameTimeout: 10
+renameTimeout: 10  # Cooldown period in seconds for item renaming
+
+# Messages for the plugin
+messages:
+  plugin_enabled: "HeartMK plugin has been enabled."
+  plugin_disabled: "HeartMK plugin has been disabled."
+  command_not_defined: "Command '%s' is not defined in plugin.yml."
+  no_permission: "You do not have permission to use this command."
+  reload_success: "Configuration reloaded successfully!"
+  reload_attempt: "%s attempted to reload configuration."
+  reload_success_log: "%s reloaded configuration successfully."
+  usage: "Usage: /ren [format] <name>"
+  no_item: "You must be holding an item to rename it!"
+  name_required: "You must provide a name to rename the item!"
+  rename_timeout: "You can rename an item again in %d seconds."
+  item_renamed: "Item renamed to: "  # Consider including the new name if applicable

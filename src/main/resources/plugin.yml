@@ -1,41 +1,41 @@
 name: HeartMK
-version: '0.2.0-SNAPSHOT'
+version: '0.3.0-SNAPSHOT'
 main: org.gentuwu.heartMK.HeartMK
 api-version: '1.21'
 prefix: 'HeartMK'
 authors: [ GentUwU ]
-description: Plugin for improvments on MK server
+description: Plugin for improvements on MK server
 website: https://github.com/GentOwU/HeartMK
 commands:
   ayugram:
-    description: "ayugram anonimen"
+    description: "Summon a custom bee."
     usage: "/ayugram <autgram>"
     aliases: [ayugram, ayu]
-    permission: heartmk.command.ayugram
-    permission-message: "ayugram ne anonimen"
+    permission: heartmk.ayugram
+    permission-message: "You do not have permission to summon a bee."
   ren:
-    description: "Rename the item in your hand"
-    usage: "/ren <new name> [color]"
-    aliases: [ren, rename]
-    permission: heartmk.command.ren
-    permission-message: "REPORT TO ADMINS TO CHECK PERMISSIONS"
+    description: "Rename the item in your hand with formatting."
+    usage: "/ren [format] <text> [format] <text> ..."
+    aliases: [rename, ren]
+    permission: heartmk.rename.item
+    permission-message: "You do not have permission to rename items."
   head:
-    description: "Put the item in your hand on your head"
+    description: "Put the item in your hand on your head."
     usage: "/head"
     aliases: [head]
-    permission: heartmk.command.head
-    permission-message: "REPORT TO ADMINS TO CHECK PERMISSIONS"
+    permission: heartmk.puton.head
+    permission-message: "You do not have permission to put an item on your head."
   mkreload:
-    description: "Reload the plugin's configuration"
+    description: "Reload the plugin's configuration."
     usage: "/mkreload"
-    permission: heartmk.command.mkreload
-    permission-message: "You do not have permission to reload MK plugin."
-permissions :
-  heartmk.command.ayugram:
+    permission: heartmk.config.reload
+    permission-message: "You do not have permission to reload the configuration."
+permissions:
+  heartmk.ayugram:
     default: true
-  heartmk.command.ren:
+  heartmk.rename.item:
     default: true
-  heartmk.command.head:
+  heartmk.puton.head:
     default: true
-  heartmk.command.mkreload:
+  heartmk.config.reload:
     default: op

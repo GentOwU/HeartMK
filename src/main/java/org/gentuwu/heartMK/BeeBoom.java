@@ -14,13 +14,13 @@ import org.bukkit.metadata.MetadataValue;
 
 import java.util.List;
 
-public class EntityListener implements Listener {
+public class BeeBoom implements Listener {
 
     private final String beeMetadataKey;
     private final String cherrySaplingName;
     private final float explosionPower;
 
-    public EntityListener() {
+    public BeeBoom() {
         // Load configuration values once in the constructor
         beeMetadataKey = HeartMK.getInstance().getConfig().getString("beeMetadataKey", "AlexeyZavr");
         cherrySaplingName = HeartMK.getInstance().getConfig().getString("cherrySaplingName", "Cherrygram");
@@ -32,6 +32,7 @@ public class EntityListener implements Listener {
         Player player = event.getPlayer();
         Entity entity = event.getRightClicked();
 
+        // Check if the entity is a bee and has the correct metadata
         if (entity instanceof Bee bee && hasMetadata(bee, beeMetadataKey)) {
             handleBeeRightClick(player, bee);
         }
@@ -40,11 +41,15 @@ public class EntityListener implements Listener {
     private void handleBeeRightClick(Player player, Bee bee) {
         ItemStack itemInHand = player.getInventory().getItemInMainHand();
 
+        // Check if the item in hand is a Cherry Sapling and has the correct display name
         if (itemInHand.getType() == Material.CHERRY_SAPLING && isCherrygram(itemInHand)) {
+            // Create an explosion at the bee's location
             bee.getWorld().createExplosion(bee.getLocation(), explosionPower);
-            player.sendMessage("Boom! The bee has exploded.");
+            // Message output removed
+            // player.sendMessage(Component.text("The bee has exploded!").color(TextColor.fromHexString("#FF0000")));
         } else {
-            player.sendMessage("You need to hold a Cherrygram sapling to interact with this bee.");
+            // Message output removed
+            // player.sendMessage(Component.text("You must hold a Cherry Sapling named " + cherrySaplingName + " to trigger the explosion.").color(TextColor.fromHexString("#FF0000")));
         }
     }
 

@@ -15,7 +15,7 @@ import org.jetbrains.annotations.NotNull;
 
 import java.util.*;
 
-public class RenameCommand implements CommandExecutor, TabCompleter {
+public class RenameItem implements CommandExecutor, TabCompleter {
 
     private final Map<UUID, Long> lastRename = new HashMap<>();
     private static final List<String> STYLES = List.of(
@@ -60,26 +60,62 @@ public class RenameCommand implements CommandExecutor, TabCompleter {
             return true;
         }
 
-        Component displayName = buildDisplayName(args);
-        if (displayName.equals(Component.empty())) {
-            player.sendMessage(Component.text("You must provide a name to rename the item!", NamedTextColor.RED));
+        // Trim each argument
+        String[] trimmedArgs = Arrays.stream(args).map(String::trim).toArray(String[]::new);
+
+        // Check if the last argument is a valid name
+        String lastArg = trimmedArgs[trimmedArgs.length - 1];
+        if (lastArg.isEmpty() || !lastArg.matches("[\\w\\s]+")) {
+            player.sendMessage(Component.text("You must provide a valid name to rename the item!", NamedTextColor.RED));
             return false;
         }
 
-        item.editMeta(meta -> meta.displayName(displayName));
-        player.sendMessage(Component.text("Item renamed to: ", NamedTextColor.GREEN).append(displayName));
+        List<String> formats = new ArrayList<>();
+        StringBuilder nameBuilder = new StringBuilder();
+
+        for (String arg : trimmedArgs) {
+            String upperArg = arg.toUpperCase();
+
+            if (STYLES.contains(upperArg)) {
+                formats.add(upperArg);
+            } else if (!isHexColor(arg)) {
+                // Append to name if it's valid text
+                nameBuilder.append(arg).append(" ");
+            }
+        }
+
+        // Create a clean display name without extra formats
+        String cleanName = nameBuilder.toString().trim();
+        final Component displayName = Component.text(cleanName); // Keep this as final
+
+        // Create a new Component for formatted display name
+        final Component formattedDisplayName; // Declare as final
+        if (!formats.isEmpty()) {
+            formattedDisplayName = applyFormats(displayName, formats); // Create a new formatted display name
+        } else {
+            formattedDisplayName = displayName; // If no formats, just use the display name
+        }
+
+        item.editMeta(meta -> meta.displayName(formattedDisplayName)); // Use the formatted display name
+        player.sendMessage(Component.text("Item renamed to: ", NamedTextColor.GREEN).append(formattedDisplayName));
 
         lastRename.put(playerId, currentTime);
         return true;
     }
 
+
+
+
+
     private Component buildDisplayName(@NotNull String[] args) {
-        Component nameComponent = Component.empty();
+        List<Component> components = new ArrayList<>();
         List<String> currentFormats = new ArrayList<>();
         TextColor currentColor = null;
 
-        for (String arg : args) {
+        for (int i = 0; i < args.length; i++) {
+            String arg = args[i];
             String upperArg = arg.toUpperCase();
+
             if (STYLES.contains(upperArg)) {
                 currentFormats.add(upperArg);
                 continue;
@@ -90,25 +126,34 @@ public class RenameCommand implements CommandExecutor, TabCompleter {
                 continue;
             }
 
-            Component textComponent = Component.text(arg + " ");
-            // Apply current formats
-            for (String format : currentFormats) {
-                textComponent = applyFormat(textComponent, format);
-            }
+            Component textComponent = Component.text(arg); // No extra space here
+            textComponent = applyFormats(textComponent, currentFormats);
 
-            // Apply current color if set
             if (currentColor != null) {
                 textComponent = textComponent.color(currentColor);
             }
 
-            nameComponent = nameComponent.append(textComponent); // Append formatted text
+            components.add(textComponent);
+            currentFormats.clear(); // Clear formats after applying
+            currentColor = null;    // Reset color for the next segment
         }
 
-        return nameComponent.children().isEmpty() ? Component.empty() : nameComponent;
+        // Join components with a space between them, except for the last one
+        return Component.text().append(components.stream()
+                .reduce((first, second) -> first.append(Component.text(" ")).append(second))
+                .orElse(Component.empty())).build();
     }
+
 
     private boolean isHexColor(String arg) {
         return arg.matches("^#[0-9A-Fa-f]{6}$");
+    }
+
+    private Component applyFormats(Component component, List<String> formats) {
+        for (String format : formats) {
+            component = applyFormat(component, format);
+        }
+        return component;
     }
 
     private Component applyFormat(Component component, String format) {
@@ -148,40 +193,24 @@ public class RenameCommand implements CommandExecutor, TabCompleter {
     public List<String> onTabComplete(@NotNull CommandSender sender, @NotNull Command command, @NotNull String alias, @NotNull String[] args) {
         List<String> suggestions = new ArrayList<>();
 
-        // Add <name> if no color/format is entered
-        if (args.length == 0) {
-            suggestions.add("<name>");
-        } else {
-            boolean hasFormat = false;
-            for (String arg : args) {
-                if (STYLES.stream().anyMatch(style -> style.equalsIgnoreCase(arg))) {
-                    hasFormat = true;
-                    break;
-                }
-            }
-            // If any valid format is entered, do not add <name>
-            if (!hasFormat) {
-                suggestions.add("<name>");
-            }
-        }
-
-        // Add styles based on current input
-        if (args.length > 0) {
-            for (String style : STYLES) {
-                if (style.startsWith(args[args.length - 1].toUpperCase())) {
-                    suggestions.add(style);
-                }
-            }
-        }
-
-        // Add hex color hint if no valid formats were found
+        // If no arguments or the last argument is empty, add <name> and hex color hints
         if (args.length == 0 || args[args.length - 1].isEmpty()) {
-            suggestions.add("#FFFFFF"); // Default hex color hint
+            suggestions.add("<name>");
+            suggestions.add("#FFFFFF");
             suggestions.add("#FF0000");
             suggestions.add("#00FF00");
             suggestions.add("#0000FF");
         }
 
+        // Add styles based on current input
+        for (String style : STYLES) {
+            if (args.length > 0 && style.startsWith(args[args.length - 1].toUpperCase())) {
+                suggestions.add(style);
+            }
+        }
+
         return suggestions;
     }
+
+
 }

@@ -3,36 +3,37 @@ package org.gentuwu.heartMK;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.PluginCommand;
 import org.bukkit.command.TabExecutor;
+import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.plugin.java.JavaPlugin;
 
-import java.util.HashMap;
-import java.util.Map;
+import java.io.File;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.StandardCopyOption;
 
 public final class HeartMK extends JavaPlugin {
 
     private static HeartMK instance;
-    public static final String REQUIRED_VERSION = "0.2.0-SNAPSHOT"; // Updated to match the config version
-
-    private final Map<String, CommandExecutor> commandMap = new HashMap<>();
+    public static final String REQUIRED_VERSION = "0.3.0-SNAPSHOT";
+    private static final String CONFIG_FILE_NAME = "config.yml";
+    private static final String BACKUP_FILE_NAME = "config_backup.yml";
 
     @Override
     public void onEnable() {
         instance = this;
         saveDefaultConfig();
-        getServer().getPluginManager().registerEvents(new EntityListener(), this);
+        checkConfig();
+
+        getServer().getPluginManager().registerEvents(new BeeBoom(), this);
         registerCommands();
         getLogger().info("HeartMK plugin has been enabled.");
     }
 
     private void registerCommands() {
-        commandMap.put("ayugram", new AyugramCommand());
-        commandMap.put("ren", new RenameCommand());
-        commandMap.put("head", new HeadCommand());
-        commandMap.put("mkreload", new MkreloadCommand());
-
-        for (Map.Entry<String, CommandExecutor> entry : commandMap.entrySet()) {
-            registerCommand(entry.getKey(), entry.getValue());
-        }
+        registerCommand("ayugram", new AyuGram());
+        registerCommand("rename", new RenameItem());
+        registerCommand("head", new PutOnHead());
+        registerCommand("mkreload", new ConfigReload());
     }
 
     private void registerCommand(String commandName, CommandExecutor executor) {
@@ -54,5 +55,34 @@ public final class HeartMK extends JavaPlugin {
 
     public static HeartMK getInstance() {
         return instance;
+    }
+
+    private void checkConfig() {
+        File configFile = new File(getDataFolder(), CONFIG_FILE_NAME);
+        File backupFile = new File(getDataFolder(), BACKUP_FILE_NAME);
+
+        if (backupFile.exists()) {
+            getLogger().warning("A backup of the config already exists!");
+        } else {
+            createBackup(configFile, backupFile);
+        }
+
+        FileConfiguration config = getConfig();
+        String currentVersion = config.getString("version", "0.0");
+
+        if (!currentVersion.equals(REQUIRED_VERSION)) {
+            getLogger().warning("Configuration version mismatch! Backup created.");
+            getLogger().warning(String.format("Current: %s, Required: %s", currentVersion, REQUIRED_VERSION));
+            createBackup(configFile, backupFile);
+        }
+    }
+
+    private void createBackup(File configFile, File backupFile) {
+        try {
+            Files.copy(configFile.toPath(), backupFile.toPath(), StandardCopyOption.REPLACE_EXISTING);
+            getLogger().info("Backup created successfully.");
+        } catch (IOException e) {
+            getLogger().severe("Failed to create a backup of the config: " + e.getMessage());
+        }
     }
 }
