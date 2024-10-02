@@ -1,6 +1,7 @@
 package org.gentuwu.heartMK;
 
-import org.bukkit.ChatColor;
+import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.format.TextColor;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
@@ -17,13 +18,13 @@ import java.util.List;
 public class AyugramCommand implements CommandExecutor, TabExecutor {
 
     private static final String BEE_METADATA_KEY = HeartMK.getInstance().getConfig().getString("beeMetadataKey", "AlexeyZavr");
-    private static final String BEE_CUSTOM_NAME = ChatColor.DARK_PURPLE + "AlexeyZavr";
+    private static final Component BEE_CUSTOM_NAME = Component.text("AlexeyZavr").color(TextColor.fromHexString("#6A0DAD"));
     private static final String SUBCOMMAND_AUTGRAM = "autgram";
 
     @Override
     public boolean onCommand(@NotNull CommandSender sender, @NotNull Command command, @NotNull String label, @NotNull String[] args) {
         if (!(sender instanceof Player player)) {
-            sender.sendMessage(ChatColor.RED + "You must be a player to use this command.");
+            MessageUtils.sendColoredMessage(sender, "You must be a player to use this command.", TextColor.fromHexString("#FF0000"));
             return true;
         }
 
@@ -33,7 +34,11 @@ public class AyugramCommand implements CommandExecutor, TabExecutor {
         }
 
         bee.setMetadata(BEE_METADATA_KEY, new FixedMetadataValue(HeartMK.getInstance(), true));
-        bee.setCustomName(BEE_CUSTOM_NAME);
+        bee.customName(BEE_CUSTOM_NAME);
+
+        player.sendMessage(Component.text("You have summoned a bee named ")
+                .append(BEE_CUSTOM_NAME)
+                .append(Component.text(".").color(TextColor.fromHexString("#00FF00"))));
 
         return true;
     }

@@ -1,10 +1,20 @@
-# config.yml
+# Configuration for HeartMK Plugin
+
+# Version of the configuration
+version: "0.2.0-SNAPSHOT"
 
 # Metadata key for bees
+# This is a unique identifier for managing bee entities in the plugin.
 beeMetadataKey: "AlexeyZavr"
 
 # Custom name for the cherry sapling
+# This name will be displayed when a cherry sapling is obtained.
 cherrySaplingName: "Cherrygram"
 
 # Explosion power for bee explosion
-explosionPower: 100.0
+# This value controls the power of explosions caused by bees (0.0 to 40.0).
+explosionPower: 1.0
+
+# Time (in seconds) between renames for a player
+# This sets a cooldown period for renaming to prevent spamming.
+renameTimeout: 10

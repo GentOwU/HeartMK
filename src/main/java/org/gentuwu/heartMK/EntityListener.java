@@ -1,5 +1,6 @@
 package org.gentuwu.heartMK;
 
+import net.kyori.adventure.text.Component;
 import org.bukkit.Material;
 import org.bukkit.entity.Bee;
 import org.bukkit.entity.Entity;
@@ -15,16 +16,23 @@ import java.util.List;
 
 public class EntityListener implements Listener {
 
-    private static final String BEE_METADATA_KEY = HeartMK.getInstance().getConfig().getString("beeMetadataKey", "AlexeyZavr");
-    private static final String CHERRY_SAPLING_NAME = HeartMK.getInstance().getConfig().getString("cherrySaplingName", "Cherrygram");
-    private static final float EXPLOSION_POWER = (float) HeartMK.getInstance().getConfig().getDouble("explosionPower", 4.0);
+    private final String beeMetadataKey;
+    private final String cherrySaplingName;
+    private final float explosionPower;
+
+    public EntityListener() {
+        // Load configuration values once in the constructor
+        beeMetadataKey = HeartMK.getInstance().getConfig().getString("beeMetadataKey", "AlexeyZavr");
+        cherrySaplingName = HeartMK.getInstance().getConfig().getString("cherrySaplingName", "Cherrygram");
+        explosionPower = (float) HeartMK.getInstance().getConfig().getDouble("explosionPower", 1.0);
+    }
 
     @EventHandler
     public void onEntityRightClick(PlayerInteractEntityEvent event) {
         Player player = event.getPlayer();
         Entity entity = event.getRightClicked();
 
-        if (entity instanceof Bee bee && hasMetadata(bee, BEE_METADATA_KEY)) {
+        if (entity instanceof Bee bee && hasMetadata(bee, beeMetadataKey)) {
             handleBeeRightClick(player, bee);
         }
     }
@@ -33,13 +41,17 @@ public class EntityListener implements Listener {
         ItemStack itemInHand = player.getInventory().getItemInMainHand();
 
         if (itemInHand.getType() == Material.CHERRY_SAPLING && isCherrygram(itemInHand)) {
-            bee.getWorld().createExplosion(bee.getLocation(), EXPLOSION_POWER);
+            bee.getWorld().createExplosion(bee.getLocation(), explosionPower);
+            player.sendMessage("Boom! The bee has exploded.");
+        } else {
+            player.sendMessage("You need to hold a Cherrygram sapling to interact with this bee.");
         }
     }
 
     private boolean isCherrygram(ItemStack item) {
         ItemMeta itemMeta = item.getItemMeta();
-        return itemMeta != null && itemMeta.hasDisplayName() && CHERRY_SAPLING_NAME.equals(itemMeta.getDisplayName());
+        return itemMeta != null && itemMeta.hasDisplayName() &&
+                itemMeta.displayName().equals(Component.text(cherrySaplingName));
     }
 
     private boolean hasMetadata(Entity entity, String key) {

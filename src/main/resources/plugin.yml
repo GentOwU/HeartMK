@@ -1,11 +1,11 @@
 name: HeartMK
-version: '0.1-SNAPSHOT'
+version: '0.2.0-SNAPSHOT'
 main: org.gentuwu.heartMK.HeartMK
 api-version: '1.21'
 prefix: 'HeartMK'
 authors: [ GentUwU ]
 description: Plugin for improvments on MK server
-website: https://github.com/mxTeamCEO/HeartMK
+website: https://github.com/GentOwU/HeartMK
 commands:
   ayugram:
     description: "ayugram anonimen"
@@ -15,7 +15,7 @@ commands:
     permission-message: "ayugram ne anonimen"
   ren:
     description: "Rename the item in your hand"
-    usage: "/ren <new name>"
+    usage: "/ren <new name> [color]"
     aliases: [ren, rename]
     permission: heartmk.command.ren
     permission-message: "REPORT TO ADMINS TO CHECK PERMISSIONS"
@@ -25,6 +25,11 @@ commands:
     aliases: [head]
     permission: heartmk.command.head
     permission-message: "REPORT TO ADMINS TO CHECK PERMISSIONS"
+  mkreload:
+    description: "Reload the plugin's configuration"
+    usage: "/mkreload"
+    permission: heartmk.command.mkreload
+    permission-message: "You do not have permission to reload MK plugin."
 permissions :
   heartmk.command.ayugram:
     default: true
@@ -32,3 +37,5 @@ permissions :
     default: true
   heartmk.command.head:
     default: true
+  heartmk.command.mkreload:
+    default: op
