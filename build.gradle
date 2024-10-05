@@ -3,7 +3,7 @@ plugins {
 }
 
 group = 'org.gentuwu'
-version = '0.3.0-SNAPSHOT'
+version = '0.3.3-SNAPSHOT'
 
 repositories {
     mavenCentral()

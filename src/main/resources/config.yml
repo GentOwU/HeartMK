@@ -1,7 +1,7 @@
 # Configuration for HeartMK Plugin
 
 # Version of the configuration
-version: "0.3.0-SNAPSHOT"  # Update this with every change to the config
+version: "0.3.3-SNAPSHOT"  # Update this with every change to the config
 
 # Metadata key for bees
 beeMetadataKey: "AlexeyZavr"  # Used to identify specific bees
