@@ -14,10 +14,11 @@ import org.bukkit.inventory.ItemStack;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.*;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 public class RenameItem implements CommandExecutor, TabCompleter {
 
-    private final Map<UUID, Long> lastRename = new HashMap<>();
     private static final List<String> STYLES = List.of(
             "AQUA", "BLACK", "BLUE", "BOLD", "DARK_AQUA", "DARK_BLUE",
             "DARK_GRAY", "DARK_GREEN", "DARK_PURPLE", "DARK_RED",
@@ -26,6 +27,13 @@ public class RenameItem implements CommandExecutor, TabCompleter {
             "UNDERLINE", "WHITE", "YELLOW"
     );
 
+    private final long cooldownTime; // Cooldown time in milliseconds
+    private final Map<UUID, Long> cooldowns = new HashMap<>(); // Player cooldowns
+
+    public RenameItem(int renameCooldown) {
+        this.cooldownTime = renameCooldown * 1000L; // Convert to milliseconds
+    }
+
     @Override
     public boolean onCommand(@NotNull CommandSender sender, @NotNull Command command, @NotNull String label, @NotNull String[] args) {
         if (!(sender instanceof Player player)) {
@@ -33,22 +41,16 @@ public class RenameItem implements CommandExecutor, TabCompleter {
             return true;
         }
 
+        if (isOnCooldown(player.getUniqueId())) {
+            long remaining = (cooldowns.get(player.getUniqueId()) + cooldownTime - System.currentTimeMillis()) / 1000;
+            player.sendMessage(Component.text("You must wait " + remaining + " seconds before renaming again.", NamedTextColor.RED));
+            return true;
+        }
+
         return renameItem(player, args);
     }
 
     private boolean renameItem(Player player, String[] args) {
-        int renameTimeoutSeconds = HeartMK.getInstance().getConfig().getInt("renameTimeout", 60);
-        long renameTimeoutMillis = renameTimeoutSeconds * 1000L;
-
-        long currentTime = System.currentTimeMillis();
-        UUID playerId = player.getUniqueId();
-
-        if (lastRename.containsKey(playerId) && (currentTime - lastRename.get(playerId)) < renameTimeoutMillis) {
-            long remainingTime = (renameTimeoutMillis - (currentTime - lastRename.get(playerId))) / 1000;
-            player.sendMessage(Component.text("You can rename an item again in " + remainingTime + " seconds.", NamedTextColor.YELLOW).decorate(TextDecoration.BOLD));
-            return true;
-        }
-
         ItemStack item = player.getInventory().getItemInMainHand();
         if (item.getType() == Material.AIR) {
             player.sendMessage(Component.text("You must be holding an item to rename it!", NamedTextColor.RED));
@@ -56,161 +58,205 @@ public class RenameItem implements CommandExecutor, TabCompleter {
         }
 
         if (args.length == 0) {
-            player.sendMessage(Component.text("Usage: /ren [format] <name>", NamedTextColor.RED));
+            player.sendMessage(Component.text("Usage: /rename [format] <name>", NamedTextColor.RED));
             return true;
         }
 
-        // Trim each argument
-        String[] trimmedArgs = Arrays.stream(args).map(String::trim).toArray(String[]::new);
+        // Join the arguments to form the name
+        String name = String.join(" ", args);
 
-        // Check if the last argument is a valid name
-        String lastArg = trimmedArgs[trimmedArgs.length - 1];
-        if (lastArg.isEmpty() || !lastArg.matches("[\\w\\s]+")) {
-            player.sendMessage(Component.text("You must provide a valid name to rename the item!", NamedTextColor.RED));
-            return false;
+        // Check for empty or whitespace name
+        if (name.trim().isEmpty()) {
+            player.sendMessage(Component.text("You must provide a name for the item.", NamedTextColor.RED));
+            return true;
         }
 
-        List<String> formats = new ArrayList<>();
-        StringBuilder nameBuilder = new StringBuilder();
-
-        for (String arg : trimmedArgs) {
-            String upperArg = arg.toUpperCase();
-
-            if (STYLES.contains(upperArg)) {
-                formats.add(upperArg);
-            } else if (!isHexColor(arg)) {
-                // Append to name if it's valid text
-                nameBuilder.append(arg).append(" ");
-            }
+        // If the name does not contain formatting tags, set it directly
+        if (!name.contains("[") && !name.contains("]")) {
+            item.editMeta(meta -> meta.displayName(Component.text(name)));
+            player.sendMessage(Component.text("Item renamed to: ", NamedTextColor.GREEN).append(Component.text(name)));
+            return true;
         }
 
-        // Create a clean display name without extra formats
-        String cleanName = nameBuilder.toString().trim();
-        final Component displayName = Component.text(cleanName); // Keep this as final
-
-        // Create a new Component for formatted display name
-        final Component formattedDisplayName; // Declare as final
-        if (!formats.isEmpty()) {
-            formattedDisplayName = applyFormats(displayName, formats); // Create a new formatted display name
-        } else {
-            formattedDisplayName = displayName; // If no formats, just use the display name
-        }
-
-        item.editMeta(meta -> meta.displayName(formattedDisplayName)); // Use the formatted display name
-        player.sendMessage(Component.text("Item renamed to: ", NamedTextColor.GREEN).append(formattedDisplayName));
-
-        lastRename.put(playerId, currentTime);
+        // Otherwise, parse the format
+        Component formattedName = parseFormat(name);
+        item.editMeta(meta -> meta.displayName(formattedName));
+        player.sendMessage(Component.text("Item renamed to: ", NamedTextColor.GREEN).append(formattedName));
         return true;
     }
 
 
 
-
-
-    private Component buildDisplayName(@NotNull String[] args) {
-        List<Component> components = new ArrayList<>();
-        List<String> currentFormats = new ArrayList<>();
+    private Component parseFormat(String input) {
+        Pattern pattern = Pattern.compile("\\[(.*?)\\]|([^\\[]+)");
+        Matcher matcher = pattern.matcher(input);
+        List<TextDecoration> activeDecorations = new ArrayList<>();
         TextColor currentColor = null;
+        Component result = Component.empty();
 
-        for (int i = 0; i < args.length; i++) {
-            String arg = args[i];
-            String upperArg = arg.toUpperCase();
+        while (matcher.find()) {
+            if (matcher.group(1) != null) {
+                String tag = matcher.group(1).toUpperCase();
 
-            if (STYLES.contains(upperArg)) {
-                currentFormats.add(upperArg);
-                continue;
+                if (tag.startsWith("#")) {
+                    currentColor = TextColor.fromHexString(tag);
+                } else if (STYLES.contains(tag)) {
+                    if (tag.equals("RESET")) {
+                        activeDecorations.clear();
+                        currentColor = null;
+                    } else if (!tag.startsWith("/")) {
+                        // Check for color mapping
+                        TextColor color = mapColor(tag);
+                        if (color != null) {
+                            currentColor = color;
+                        } else {
+                            activeDecorations.add(mapDecoration(tag));
+                        }
+                    } else {
+                        String closingTag = tag.substring(1);
+                        activeDecorations.remove(mapDecoration(closingTag));
+                    }
+                }
+            } else {
+                String text = matcher.group(2);
+                Component component = Component.text(text);
+
+                if (currentColor != null) {
+                    component = component.color(currentColor);
+                }
+                for (TextDecoration decoration : activeDecorations) {
+                    component = component.decorate(decoration);
+                }
+
+                result = result.append(component);
             }
-
-            if (isHexColor(arg)) {
-                currentColor = TextColor.fromHexString(arg);
-                continue;
-            }
-
-            Component textComponent = Component.text(arg); // No extra space here
-            textComponent = applyFormats(textComponent, currentFormats);
-
-            if (currentColor != null) {
-                textComponent = textComponent.color(currentColor);
-            }
-
-            components.add(textComponent);
-            currentFormats.clear(); // Clear formats after applying
-            currentColor = null;    // Reset color for the next segment
         }
 
-        // Join components with a space between them, except for the last one
-        return Component.text().append(components.stream()
-                .reduce((first, second) -> first.append(Component.text(" ")).append(second))
-                .orElse(Component.empty())).build();
+        return result;
     }
 
 
-    private boolean isHexColor(String arg) {
-        return arg.matches("^#[0-9A-Fa-f]{6}$");
-    }
-
-    private Component applyFormats(Component component, List<String> formats) {
-        for (String format : formats) {
-            component = applyFormat(component, format);
-        }
-        return component;
-    }
-
-    private Component applyFormat(Component component, String format) {
-        return switch (format) {
-            case "BOLD" -> component.decoration(TextDecoration.BOLD, true);
-            case "ITALIC" -> component.decoration(TextDecoration.ITALIC, true);
-            case "MAGIC" -> component.decoration(TextDecoration.OBFUSCATED, true);
-            case "UNDERLINE" -> component.decoration(TextDecoration.UNDERLINED, true);
-            case "STRIKETHROUGH" -> component.decoration(TextDecoration.STRIKETHROUGH, true);
-            default -> applyColorStyle(component, format);
+    private TextDecoration mapDecoration(String style) {
+        return switch (style) {
+            case "BOLD" -> TextDecoration.BOLD;
+            case "ITALIC" -> TextDecoration.ITALIC;
+            case "UNDERLINE" -> TextDecoration.UNDERLINED;
+            case "STRIKETHROUGH" -> TextDecoration.STRIKETHROUGH;
+            case "MAGIC" -> TextDecoration.OBFUSCATED;
+            default -> null; // Keep this default for text styles
         };
     }
 
-    private Component applyColorStyle(Component component, String color) {
-        return switch (color) {
-            case "AQUA" -> component.color(TextColor.fromHexString("#00FFFF"));
-            case "BLACK" -> component.color(TextColor.fromHexString("#000000"));
-            case "BLUE" -> component.color(TextColor.fromHexString("#0000FF"));
-            case "DARK_AQUA" -> component.color(TextColor.fromHexString("#008B8B"));
-            case "DARK_BLUE" -> component.color(TextColor.fromHexString("#00008B"));
-            case "DARK_GRAY" -> component.color(TextColor.fromHexString("#A9A9A9"));
-            case "DARK_GREEN" -> component.color(TextColor.fromHexString("#006400"));
-            case "DARK_PURPLE" -> component.color(TextColor.fromHexString("#4B0082"));
-            case "DARK_RED" -> component.color(TextColor.fromHexString("#8B0000"));
-            case "GOLD" -> component.color(TextColor.fromHexString("#FFD700"));
-            case "GRAY" -> component.color(TextColor.fromHexString("#808080"));
-            case "GREEN" -> component.color(TextColor.fromHexString("#008000"));
-            case "LIGHT_PURPLE" -> component.color(TextColor.fromHexString("#DDA0DD"));
-            case "RED" -> component.color(TextColor.fromHexString("#FF0000"));
-            case "RESET", "WHITE" -> component.color(TextColor.fromHexString("#FFFFFF"));
-            case "YELLOW" -> component.color(TextColor.fromHexString("#FFFF00"));
-            default -> component;
+    private TextColor mapColor(String colorName) {
+        return switch (colorName) {
+            case "AQUA" -> NamedTextColor.AQUA;
+            case "BLACK" -> NamedTextColor.BLACK;
+            case "BLUE" -> NamedTextColor.BLUE;
+            case "DARK_AQUA" -> NamedTextColor.DARK_AQUA;
+            case "DARK_BLUE" -> NamedTextColor.DARK_BLUE;
+            case "DARK_GRAY" -> NamedTextColor.DARK_GRAY;
+            case "DARK_GREEN" -> NamedTextColor.DARK_GREEN;
+            case "DARK_PURPLE" -> NamedTextColor.DARK_PURPLE;
+            case "DARK_RED" -> NamedTextColor.DARK_RED;
+            case "GOLD" -> NamedTextColor.GOLD;
+            case "GRAY" -> NamedTextColor.GRAY;
+            case "GREEN" -> NamedTextColor.GREEN;
+            case "LIGHT_PURPLE" -> NamedTextColor.LIGHT_PURPLE;
+            case "RED" -> NamedTextColor.RED;
+            case "WHITE" -> NamedTextColor.WHITE;
+            case "YELLOW" -> NamedTextColor.YELLOW;
+            case "RESET" -> null; // Resetting the color
+            default -> null; // Unknown color
         };
     }
 
+
+    private boolean isOnCooldown(UUID playerId) {
+        return cooldowns.containsKey(playerId) && (System.currentTimeMillis() - cooldowns.get(playerId)) < cooldownTime;
+    }
+
+    // Implementing TabCompletion
     @Override
     public List<String> onTabComplete(@NotNull CommandSender sender, @NotNull Command command, @NotNull String alias, @NotNull String[] args) {
         List<String> suggestions = new ArrayList<>();
 
-        // If no arguments or the last argument is empty, add <name> and hex color hints
         if (args.length == 0 || args[args.length - 1].isEmpty()) {
             suggestions.add("<name>");
-            suggestions.add("#FFFFFF");
-            suggestions.add("#FF0000");
-            suggestions.add("#00FF00");
-            suggestions.add("#0000FF");
+            suggestions.add("[");
+            return suggestions;
         }
 
-        // Add styles based on current input
-        for (String style : STYLES) {
-            if (args.length > 0 && style.startsWith(args[args.length - 1].toUpperCase())) {
-                suggestions.add(style);
+        String lastArg = args[args.length - 1];
+        int lastTagOpen = lastArg.lastIndexOf('['); // Index of last opening '['
+
+        // Case: A new tag starts (e.g., "[")
+        if (lastTagOpen != -1 && lastArg.endsWith("[")) {
+            suggestions.add("<name>");
+            for (String style : STYLES) {
+                suggestions.add(lastArg + style + "]");
             }
+        }
+        // Case: Multiple tags (e.g., "[GREEN][D")
+        else if (lastTagOpen != -1 && lastArg.contains("][")) {
+            String previousTag = lastArg.substring(0, lastArg.lastIndexOf("][") + 2); // Extract before last "]["
+            String partialTag = lastArg.substring(lastArg.lastIndexOf("][") + 2);     // After last "]["
+
+            for (String style : STYLES) {
+                if (style.startsWith(partialTag.toUpperCase())) {
+                    suggestions.add(previousTag + style + "]");
+                }
+            }
+
+            if (partialTag.isEmpty()) {
+                suggestions.add(previousTag + "<name>");
+            }
+        }
+        // Case: Incomplete single tag (e.g., "[D")
+        else if (lastArg.startsWith("[") && !lastArg.startsWith("[/")) {
+            String partialTag = lastArg.substring(1); // After opening '['
+            for (String style : STYLES) {
+                if (style.startsWith(partialTag.toUpperCase())) {
+                    suggestions.add("[" + style + "]");
+                }
+            }
+        }
+        // Case: Detect incomplete closing tag "[/]" or "[/AQUA]" or "[/"
+        else if (lastArg.startsWith("[/")) {
+            String partialTag = lastArg.substring(2); // After "[/"
+
+            // If only "[/" is typed without a tag, suggest closing tag based on last open tag
+            if (partialTag.isEmpty() && args.length > 1) {
+                // Check the previous argument for a valid open tag
+                String lastOpenTag = args[args.length - 2];
+                if (lastOpenTag.startsWith("[") && !lastOpenTag.startsWith("[/")) {
+                    String openTag = lastOpenTag.substring(1); // Extract the tag inside "["
+                    suggestions.add("[/" + openTag + "]");
+                }
+            } else {
+                // Suggest closing tags based on the partial closing tag input
+                for (String style : STYLES) {
+                    if (style.startsWith(partialTag.toUpperCase())) {
+                        suggestions.add("[/" + style + "]");
+                    }
+                }
+            }
+        }
+        // Case: Hex color code (e.g., "[#")
+        else if (lastArg.startsWith("[#")) {
+            if (lastArg.length() <= 7) { // Valid hex length
+                suggestions.add("[#FFFFFF]");
+                suggestions.add("[#FF0000]");
+                suggestions.add("[#00FF00]");
+                suggestions.add("[#0000FF]");
+            }
+        }
+        // Case: Closing bracket exists (e.g., "]")
+        else if (lastArg.endsWith("]")) {
+            String beforeLastBracket = lastArg.substring(0, lastArg.length() - 1);
+            suggestions.add(beforeLastBracket + "]<name>");
+            suggestions.add(beforeLastBracket + "][");
         }
 
         return suggestions;
     }
-
-
 }

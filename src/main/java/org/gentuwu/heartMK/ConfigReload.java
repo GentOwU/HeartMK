@@ -39,7 +39,7 @@ public class ConfigReload implements CommandExecutor, TabExecutor {
 
     private void checkVersion(CommandSender sender) {
         FileConfiguration config = HeartMK.getInstance().getConfig();
-        String currentVersion = config.getString("version", "0.3.0-SNAPSHOT");
+        String currentVersion = config.getString("version", "0.3.3-SNAPSHOT");
 
         if (!currentVersion.equals(HeartMK.REQUIRED_VERSION)) {
             String warningMessage = String.format("Configuration version mismatch! Current: %s, Required: %s", currentVersion, HeartMK.REQUIRED_VERSION);

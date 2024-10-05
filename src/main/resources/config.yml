@@ -13,7 +13,7 @@ cherrySaplingName: "Cherrygram"  # Display name for the sapling item
 explosionPower: 1.0  # Determines the strength of the explosion when a bee is triggered
 
 # Time (in seconds) between renames for a player
-renameTimeout: 10  # Cooldown period in seconds for item renaming
+renameCooldown: 10  # Cooldown period in seconds for item renaming
 
 # Messages for the plugin
 messages:

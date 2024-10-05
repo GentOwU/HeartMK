@@ -14,7 +14,7 @@ import java.nio.file.StandardCopyOption;
 public final class HeartMK extends JavaPlugin {
 
     private static HeartMK instance;
-    public static final String REQUIRED_VERSION = "0.3.0-SNAPSHOT";
+    public static final String REQUIRED_VERSION = "0.3.3-SNAPSHOT";
     private static final String CONFIG_FILE_NAME = "config.yml";
     private static final String BACKUP_FILE_NAME = "config_backup.yml";
 
@@ -31,7 +31,8 @@ public final class HeartMK extends JavaPlugin {
 
     private void registerCommands() {
         registerCommand("ayugram", new AyuGram());
-        registerCommand("rename", new RenameItem());
+        int renameCooldown = getConfig().getInt("renameCooldown", 10);  // Fetch renameCooldown from config or use 10 seconds as default
+        registerCommand("rename", new RenameItem(renameCooldown));  // Pass the timeout to RenameItem
         registerCommand("head", new PutOnHead());
         registerCommand("mkreload", new ConfigReload());
     }
